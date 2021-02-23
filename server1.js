@@ -7,7 +7,7 @@ const influx = new Influx.InfluxDB('http://CYE:#P@voM@rcel@90.152.196.243:44500/
 var topic = "htl/CYE/Module280/";
 var username = 'CYE';
 var password = "EYC";
-var broker = 'localhost';
+var broker = '192.168.1.21';
 var port = 1883;
 var temp = new Array(100);
 var pres = 0;
@@ -45,7 +45,7 @@ function writeToInflux(topic, message) {
       if (temp.length <= 100) {
         temp.push(Number(message));
       } else {
-        temp = Array.slice(1, 100)
+        temp = temp.slice(1, 100)
         temp[100] = Number(message)
       }
       break;
