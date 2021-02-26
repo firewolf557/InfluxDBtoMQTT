@@ -7,9 +7,9 @@ const influx = new Influx.InfluxDB('http://CYE:#P@voM@rcel@90.152.196.243:44500/
 var topic = "htl/CYE/Module280/";
 var username = 'CYE';
 var password = "EYC";
-var broker = '192.168.1.21';
+var broker = '10.68.252.90';
 var port = 1883;
-var temp = new Array(100);
+var temp = [];
 var pres = 0;
 var hum = 0;
 
@@ -24,6 +24,7 @@ client.on('message', function (topic, message) {
   message = message.toString();
   console.log(message);
   writeToInflux(topic, message)
+  counter++;
 })
 
 client.on('connect', function () {
@@ -42,10 +43,10 @@ client.on('connect', function () {
 function writeToInflux(topic, message) {
   switch (topic.toString()) {
     case "htl/CYE/Module280/temp":
-      if (temp.length <= 100) {
+      if (temp.length < 100) {
         temp.push(Number(message));
       } else {
-        temp = temp.slice(1, 100)
+        temp = temp.slice(1, 99)
         temp[100] = Number(message)
       }
       break;
@@ -65,9 +66,10 @@ function writeToInflux(topic, message) {
       },
 
       fields: {
-        temperature: Number(temp),
+        temperature: Number(temp[temp.length - 1]),
         pressure: Number(pres),
         humiditiy: Number(hum)
+
 
       },
     }
