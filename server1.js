@@ -1,11 +1,11 @@
 
-var mqtt = require('mqtt');
-var Influx = require('influx');
+let mqtt = require('mqtt');
+let Influx = require('influx');
 
 //const influx = new Influx.InfluxDB('http://user:password@host:8086/database')
 const influx = new Influx.InfluxDB('http://cye:eyc@90.152.196.243:44500/strays');
-var topic = "htl/CYE/Module280/";
-let username = 'CYE', password = "EYC", broker = '192.168.1.21', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0;
+//var topic = "htl/CYE/Module280/";
+let username = 'CYE', password = "EYC", broker = '192.168.1.21', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false
 
 /**
  * Define client as the MQTT-Broker u want to Connect to
@@ -59,28 +59,31 @@ function writeToInflux(topic, message) {
       break;
   }
 
-  influx.writePoints([
-    {
-      measurement: 'strayData',
-      tags: {
-        module: "Module280"
-      },
+  console.log("Temperature: " + tempArr[tempArr.length - 1] + "; Humidity: " + humArr[humArr.length - 1] + "; Pressure: " + pressArr[pressArr.length - 1])
+  if ((tempAvg - 5 > tempArr[tempArr.length - 1] && tempAvg + 5 < tempArr[tempArr.length - 1]) || (humAvg - 15 > humArr[humArr.length - 1] && humAvg + 15 < humArr[humArr.length - 1]) || (pressAvg - 10 > pressArr[pressArr.length - 1] && pressAvg + 10 < pressArr[pressArr.length - 1])) {
+    influx.writePoints([
+      {
+        measurement: 'strayData',
+        tags: {
+          module: "Module280"
+        },
 
-      fields: {
-        temperature: Number(tempArr[tempArr.length - 1]),
-        pressure: Number(pressArr[pressArr.length - 1]),
-        humiditiy: Number(humArr[humArr.length - 1]),
+        fields: {
+          temperature: Number(tempArr[tempArr.length - 1]),
+          pressure: Number(pressArr[pressArr.length - 1]),
+          humiditiy: Number(humArr[humArr.length - 1]),
 
 
-      },
-    }
-  ], {
-    database: 'strays',
-    precision: 'ns',
-  })
-    .catch(error => {
-      console.error(`Error saving data to InfluxDB! ${error.stack}`)
-    });
+        },
+      }
+    ], {
+      database: 'strays',
+      precision: 'ns',
+    })
+      .catch(error => {
+        console.error(`Error saving data to InfluxDB! ${error.stack}`)
+      });
+  }
 }
 /**
  * 
