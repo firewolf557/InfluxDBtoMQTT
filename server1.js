@@ -1,11 +1,15 @@
-
+/*** 
+ * Author0 (main script):Ronald Taferner
+ * Author1 (extender and editor of this script): endurojunky
+ * 
+ * */ 
 let mqtt = require('mqtt');
 let Influx = require('influx');
 
 //const influx = new Influx.InfluxDB('http://user:password@host:8086/database')
-const influx = new Influx.InfluxDB('http://cye:eyc@90.152.196.243:44500/strays');
+const influx = new Influx.InfluxDB('http://INFLUX_USERNAME:INFLUX_PASSWORD@INFLUX_URL:INFLUX_PORT/INFLUX_DATABASE');
 //var topic = "htl/CYE/Module280/";
-let username = 'CYE', password = "EYC", broker = '192.168.1.21', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
+let username = 'MQTT_USERNAME', password = "MQTT_PASSWORD", broker = 'MQTTBroker_URL', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
 
 /**
  * Define client as the MQTT-Broker u want to Connect to
