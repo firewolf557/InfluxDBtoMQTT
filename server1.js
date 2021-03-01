@@ -107,7 +107,7 @@ function saveData(arr, arrAvg, message) {
   } else {
     console.log("Array = 800");
     arr = arr.slice(1, 799);
-    arr[99] = Number(message);
+    arr[799] = Number(message);
     console.log("Avarage Value: " + arrAvg + " with " + arr.length + " dataentries");
   }
 }
