@@ -5,7 +5,7 @@ let Influx = require('influx');
 //const influx = new Influx.InfluxDB('http://user:password@host:8086/database')
 const influx = new Influx.InfluxDB('http://cye:eyc@90.152.196.243:44500/strays');
 //var topic = "htl/CYE/Module280/";
-let username = 'CYE', password = "EYC", broker = '192.168.1.21', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0;
+let username = 'CYE', password = "EYC", broker = '192.168.1.21', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
 
 /**
  * Define client as the MQTT-Broker u want to Connect to
@@ -58,15 +58,42 @@ function writeToInflux(topic, message) {
       pressAvg = calcAvg(pressArr);
       break;
   }
+  //Every hour the average values of temperature, humidity and pressure are sent to InfluxDB
+  countHour += 1;
+  //Every Hour 2400 Data Entries are made so the values are sent every 2400 entries (data received every 4.5s)
+  //if you are receiving data in other time intervals you calculate your entries for one hour with e(1h)=(3600/time-interval)*number of topics (it would be 800 with only one topic)
+  if (countHour == 2400) {
+    influx.writePoints([
+      {
+        measurement: 'strayData',
+        tags: {
+          module: "Module280"
+        },
 
-  
-  if ((tempAvg - 5 > tempArr[tempArr.length - 1] || tempAvg + 5 < tempArr[tempArr.length - 1]) || (humAvg - 15 > humArr[humArr.length - 1] || humAvg + 15 < humArr[humArr.length - 1]) || (pressAvg - 10 > pressArr[pressArr.length - 1] || pressAvg + 10 < pressArr[pressArr.length - 1])||send==true) {
-    
+        fields: {
+          averageTemperature: Number(tempAvg),
+          averagePressure: Number(pressAvg),
+          averageHumiditiy: Number(humAvg),
+        },
+      }
+    ], {
+      database: 'strays',
+      precision: 'ns',
+    })
+      .catch(error => {
+        console.error(`Error saving data to InfluxDB! ${error.stack}`)
+      });
+      countHour=0;
+  }
+
+  if ((tempAvg - 5 > tempArr[tempArr.length - 1] || tempAvg + 5 < tempArr[tempArr.length - 1]) || (humAvg - 15 > humArr[humArr.length - 1] || humAvg + 15 < humArr[humArr.length - 1]) || (pressAvg - 10 > pressArr[pressArr.length - 1] || pressAvg + 10 < pressArr[pressArr.length - 1]) || send == true) {
+
     send = true;
     countData += 1;
-    if(countData == 10){
+    if (countData == 800) {
       send = false;
       countData = 0;
+
     }
     console.log("Temperature: " + tempArr[tempArr.length - 1] + "; Humidity: " + humArr[humArr.length - 1] + "; Pressure: " + pressArr[pressArr.length - 1])
     influx.writePoints([
