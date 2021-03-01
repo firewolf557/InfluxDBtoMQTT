@@ -36,9 +36,9 @@ client.on('connect', function () {
   console.log('client connected');
   client.qos = 1;
   //Für Anmeldung des Clients
-  client.subscribe("htl/CYE/Module280/temp");
-  client.subscribe("htl/CYE/Module280/baro");
-  client.subscribe("htl/CYE/Module280/hum");
+  client.subscribe("TOPIC/TOPIC1");
+  client.subscribe("TOPIC/TOPIC2");
+  client.subscribe("TOPIC/TOPIC3");
 })
 /**
  * 
@@ -49,15 +49,15 @@ client.on('connect', function () {
  */
 function writeToInflux(topic, message) {
   switch (topic.toString()) {
-    case "htl/CYE/Module280/temp":
+    case "TOPIC/TOPIC1":
       saveData(tempArr, tempAvg, message);
       tempAvg = calcAvg(tempArr);
       break;
-    case "htl/CYE/Module280/hum":
+    case "TOPIC/TOPIC2":
       saveData(humArr, humAvg, message);
       humAvg = calcAvg(humArr);
       break;
-    case "htl/CYE/Module280/baro":
+    case "TOPIC/TOPIC3":
       saveData(pressArr, pressAvg, message);
       pressAvg = calcAvg(pressArr);
       break;
@@ -69,9 +69,9 @@ function writeToInflux(topic, message) {
   if (countHour == 2400) {
     influx.writePoints([
       {
-        measurement: 'strayData',
+        measurement: 'measurement',
         tags: {
-          module: "Module280"
+          module: "Module_NAME"
         },
 
         fields: {
@@ -81,7 +81,7 @@ function writeToInflux(topic, message) {
         },
       }
     ], {
-      database: 'strays',
+      database: 'INFLUX_DATABASE',
       precision: 'ns',
     })
       .catch(error => {
@@ -102,9 +102,9 @@ function writeToInflux(topic, message) {
     console.log("Temperature: " + tempArr[tempArr.length - 1] + "; Humidity: " + humArr[humArr.length - 1] + "; Pressure: " + pressArr[pressArr.length - 1])
     influx.writePoints([
       {
-        measurement: 'strayData',
+        measurement: 'measurement',
         tags: {
-          module: "Module280"
+          module: "Module_NAME"
         },
 
         fields: {
@@ -114,7 +114,7 @@ function writeToInflux(topic, message) {
         },
       }
     ], {
-      database: 'strays',
+      database: 'INFLUX_DATABASE',
       precision: 'ns',
     })
       .catch(error => {
