@@ -7,9 +7,10 @@ let mqtt = require('mqtt');
 let Influx = require('influx');
 
 //const influx = new Influx.InfluxDB('http://user:password@host:8086/database')
-const influx = new Influx.InfluxDB('http://INFLUX_USERNAME:INFLUX_PASSWORD@INFLUX_URL:INFLUX_PORT/INFLUX_DATABASE');
+const influx = new Influx.InfluxDB('http://cye:eyc@90.152.196.243:44500/strays');
+//var topic = "htl/CYE/Module280/";
+let username = 'CYE', password = "EYC", broker = '192.168.1.21', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
 
-let username = 'MQTT_USERNAME', password = "MQTT_PASSWORD", broker = 'MQTTBroker_URL', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
 /**
  * Define client as the MQTT-Broker u want to Connect to
  */
@@ -34,10 +35,10 @@ client.on('message', function (topic, message) {
 client.on('connect', function () {
   console.log('client connected');
   client.qos = 1;
-  //Für Anmeldung des Clients
-  client.subscribe("TOPIC/TOPIC1");
-  client.subscribe("TOPIC/TOPIC2");
-  client.subscribe("TOPIC/TOPIC3");
+  //FÃ¼r Anmeldung des Clients
+  client.subscribe("htl/CYE/Module280/temp");
+  client.subscribe("htl/CYE/Module280/baro");
+  client.subscribe("htl/CYE/Module280/hum");
 })
 /**
  * 
@@ -48,15 +49,15 @@ client.on('connect', function () {
  */
 function writeToInflux(topic, message) {
   switch (topic.toString()) {
-    case "TOPIC/TOPIC1":
+    case "htl/CYE/Module280/temp":
       saveData(tempArr, tempAvg, message);
       tempAvg = calcAvg(tempArr);
       break;
-    case "TOPIC/TOPIC2":
+    case "htl/CYE/Module280/hum":
       saveData(humArr, humAvg, message);
       humAvg = calcAvg(humArr);
       break;
-    case "TOPIC/TOPIC3":
+    case "htl/CYE/Module280/baro":
       saveData(pressArr, pressAvg, message);
       pressAvg = calcAvg(pressArr);
       break;
@@ -65,13 +66,13 @@ function writeToInflux(topic, message) {
   countHour += 1;
   //Every Hour 2400 Data Entries are made so the values are sent every 2400 entries (data received every 2s)
   //if you are receiving data in other time intervals you calculate your entries for one hour with e(1h)=(3600/time-interval)*number of topics (it would be 800 with only one topic)
-  if (countHour == 2700) {
+  if (countHour == 5400) {
     writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr)
     countHour = 0;
   }
 
   if ((tempAvg - 5 > tempArr[tempArr.length - 1] || tempAvg + 5 < tempArr[tempArr.length - 1]) || (humAvg - 15 > humArr[humArr.length - 1] || humAvg + 15 < humArr[humArr.length - 1]) || (pressAvg - 10 > pressArr[pressArr.length - 1] || pressAvg + 10 < pressArr[pressArr.length - 1])) {
-    send = false
+    send = false;
     if (!send) {
       writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr)
     }
@@ -79,13 +80,14 @@ function writeToInflux(topic, message) {
   }
 
   if (send) {
-    countData += 1
-    if (countData == 2700) {
-      send = false
-      countData = 0
+    countData += 1;
+    if (countData == 5400) {
+      send = false;
+      countData = 0;
     }
-    console.log("Temperature: " + tempArr[tempArr.length - 1] + "; Humidity: " + humArr[humArr.length - 1] + "; Pressure: " + pressArr[pressArr.length - 1])
-    writeCurrentValue(tempArr, pressArr, humArr)
+    console.log("Temperature: " + tempArr[tempArr.length - 1] + "; Humidity: " + humArr[humArr.length - 1] + "; Pressure: " + pressArr[pressArr.length - 1]);
+    writeCurrentValue(tempArr, pressArr, humArr);
+    
   }
 }
 
@@ -98,15 +100,18 @@ function writeToInflux(topic, message) {
  * this function stores data recived from the MQTT- Broker in a "floating Array" 
  */
 function saveData(arr, arrAvg, message) {
-  if (arr.length < 900) {
+  if (arr.length < 1800) {
     console.log("Array < 900");
     arr.push(Number(message));
-    console.log("Avarage Value: " + arrAvg + " with " + arr.length + " dataentries");
+    console.log("Avarage Value: " + arrAvg + " with " + arr.length + " data entries");
+   
+
   } else {
     console.log("Array = 900");
-    arr = arr.slice(1, 899);
-    arr[899] = Number(message);
-    console.log("Avarage Value: " + arrAvg + " with " + arr.length + " dataentries");
+    arr.shift();
+    arr.push(Number(message));
+    console.log(arr);
+    console.log("Avarage Value: " + arrAvg + " with " + arr.length + " data entries");
   }
 }
 /**
@@ -125,9 +130,9 @@ function calcAvg(arr) {
 function writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr) {
   influx.writePoints([
     {
-      measurement: 'measurement',
+      measurement: 'strayData',
       tags: {
-        module: "Module_NAME"
+        module: "Module280"
       },
 
       fields: {
@@ -140,7 +145,7 @@ function writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr) {
       },
     }
   ], {
-    database: 'DATABASE',
+    database: 'strays',
     precision: 'ns',
   })
     .catch(error => {
@@ -151,9 +156,9 @@ function writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr) {
 function writeCurrentValue(tempArr, pressArr, humArr) {
   influx.writePoints([
     {
-      measurement: 'measurement',
+      measurement: 'strayData',
       tags: {
-        module: "Module_NAME"
+        module: "Module280"
       },
 
       fields: {
@@ -163,7 +168,7 @@ function writeCurrentValue(tempArr, pressArr, humArr) {
       },
     }
   ], {
-    database: 'DATABASE',
+    database: 'strays',
     precision: 'ns',
   })
     .catch(error => {
