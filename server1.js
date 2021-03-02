@@ -2,15 +2,14 @@
  * Author0 (main script):Ronald Taferner
  * Author1 (extender and editor of this script): endurojunky
  * 
- * */ 
+ * */
 let mqtt = require('mqtt');
 let Influx = require('influx');
 
 //const influx = new Influx.InfluxDB('http://user:password@host:8086/database')
 const influx = new Influx.InfluxDB('http://INFLUX_USERNAME:INFLUX_PASSWORD@INFLUX_URL:INFLUX_PORT/INFLUX_DATABASE');
-//var topic = "htl/CYE/Module280/";
-let username = 'MQTT_USERNAME', password = "MQTT_PASSWORD", broker = 'MQTTBroker_URL', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
 
+let username = 'MQTT_USERNAME', password = "MQTT_PASSWORD", broker = 'MQTTBroker_URL', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
 /**
  * Define client as the MQTT-Broker u want to Connect to
  */
@@ -64,64 +63,32 @@ function writeToInflux(topic, message) {
   }
   //Every hour the average values of temperature, humidity and pressure are sent to InfluxDB
   countHour += 1;
-  //Every Hour 2400 Data Entries are made so the values are sent every 2400 entries (data received every 4.5s)
+  //Every Hour 2400 Data Entries are made so the values are sent every 2400 entries (data received every 2s)
   //if you are receiving data in other time intervals you calculate your entries for one hour with e(1h)=(3600/time-interval)*number of topics (it would be 800 with only one topic)
-  if (countHour == 2400) {
-    influx.writePoints([
-      {
-        measurement: 'measurement',
-        tags: {
-          module: "Module_NAME"
-        },
-
-        fields: {
-          averageTemperature: Number(tempAvg),
-          averagePressure: Number(pressAvg),
-          averageHumiditiy: Number(humAvg),
-        },
-      }
-    ], {
-      database: 'INFLUX_DATABASE',
-      precision: 'ns',
-    })
-      .catch(error => {
-        console.error(`Error saving data to InfluxDB! ${error.stack}`)
-      });
-      countHour=0;
+  if (countHour == 2700) {
+    writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr)
+    countHour = 0;
   }
 
-  if ((tempAvg - 5 > tempArr[tempArr.length - 1] || tempAvg + 5 < tempArr[tempArr.length - 1]) || (humAvg - 15 > humArr[humArr.length - 1] || humAvg + 15 < humArr[humArr.length - 1]) || (pressAvg - 10 > pressArr[pressArr.length - 1] || pressAvg + 10 < pressArr[pressArr.length - 1]) || send == true) {
-
+  if ((tempAvg - 5 > tempArr[tempArr.length - 1] || tempAvg + 5 < tempArr[tempArr.length - 1]) || (humAvg - 15 > humArr[humArr.length - 1] || humAvg + 15 < humArr[humArr.length - 1]) || (pressAvg - 10 > pressArr[pressArr.length - 1] || pressAvg + 10 < pressArr[pressArr.length - 1])) {
+    send = false
+    if (!send) {
+      writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr)
+    }
     send = true;
-    countData += 1;
-    if (countData == 800) {
-      send = false;
-      countData = 0;
+  }
 
+  if (send) {
+    countData += 1
+    if (countData == 2700) {
+      send = false
+      countData = 0
     }
     console.log("Temperature: " + tempArr[tempArr.length - 1] + "; Humidity: " + humArr[humArr.length - 1] + "; Pressure: " + pressArr[pressArr.length - 1])
-    influx.writePoints([
-      {
-        measurement: 'measurement',
-        tags: {
-          module: "Module_NAME"
-        },
-
-        fields: {
-          temperature: Number(tempArr[tempArr.length - 1]),
-          pressure: Number(pressArr[pressArr.length - 1]),
-          humiditiy: Number(humArr[humArr.length - 1]),
-        },
-      }
-    ], {
-      database: 'INFLUX_DATABASE',
-      precision: 'ns',
-    })
-      .catch(error => {
-        console.error(`Error saving data to InfluxDB! ${error.stack}`)
-      });
+    writeCurrentValue(tempArr, pressArr, humArr)
   }
 }
+
 
 /**
  * 
@@ -131,14 +98,14 @@ function writeToInflux(topic, message) {
  * this function stores data recived from the MQTT- Broker in a "floating Array" 
  */
 function saveData(arr, arrAvg, message) {
-  if (arr.length < 800) {
-    console.log("Array < 800");
+  if (arr.length < 900) {
+    console.log("Array < 900");
     arr.push(Number(message));
     console.log("Avarage Value: " + arrAvg + " with " + arr.length + " dataentries");
   } else {
-    console.log("Array = 800");
-    arr = arr.slice(1, 799);
-    arr[799] = Number(message);
+    console.log("Array = 900");
+    arr = arr.slice(1, 899);
+    arr[899] = Number(message);
     console.log("Avarage Value: " + arrAvg + " with " + arr.length + " dataentries");
   }
 }
@@ -153,4 +120,53 @@ function calcAvg(arr) {
     sum += element;
   });
   return sum / arr.length;
+}
+
+function writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr) {
+  influx.writePoints([
+    {
+      measurement: 'measurement',
+      tags: {
+        module: "Module_NAME"
+      },
+
+      fields: {
+        averageTemperature: Number(tempAvg),
+        averagePressure: Number(pressAvg),
+        averageHumiditiy: Number(humAvg),
+        temperature: Number(tempArr[tempArr.length - 1]),
+        pressure: Number(pressArr[pressArr.length - 1]),
+        humiditiy: Number(humArr[humArr.length - 1]),
+      },
+    }
+  ], {
+    database: 'DATABASE',
+    precision: 'ns',
+  })
+    .catch(error => {
+      console.error(`Error saving data to InfluxDB! ${error.stack}`)
+    });
+}
+
+function writeCurrentValue(tempArr, pressArr, humArr) {
+  influx.writePoints([
+    {
+      measurement: 'measurement',
+      tags: {
+        module: "Module_NAME"
+      },
+
+      fields: {
+        temperature: Number(tempArr[tempArr.length - 1]),
+        pressure: Number(pressArr[pressArr.length - 1]),
+        humiditiy: Number(humArr[humArr.length - 1]),
+      },
+    }
+  ], {
+    database: 'DATABASE',
+    precision: 'ns',
+  })
+    .catch(error => {
+      console.error(`Error saving data to InfluxDB! ${error.stack}`)
+    });
 }
