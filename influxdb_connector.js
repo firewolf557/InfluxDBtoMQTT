@@ -1,6 +1,6 @@
 /*** 
  * Author0 (main script):Ronald Taferner
- * Author1 (extender and editor of this script): endurojunky
+ * Author1 (extender and editor of this script): firewolf557
  * 
  * */
 let mqtt = require('mqtt');
