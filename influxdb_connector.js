@@ -6,8 +6,9 @@
 let mqtt = require('mqtt');
 let Influx = require('influx');
 
-//const influx = new Influx.InfluxDB('http://user:password@host:8086/database')
-const influx = new Influx.InfluxDB('http://INFLUXDB_USER:INFLUXDB_PASSWORD@INFLUXDB_HOST:INFLUXDB_PORT/INFLUXDB_DATABASE');
+//const influx = new Influx.InfluxDB('http://user:password@host:port/database')/('https://user:password@host:port/database')
+
+const influx = new Influx.InfluxDB('https://INFLUXDB_USER:INFLUXDB_PASSWORD@INFLUXDB_HOST:INFLUXDB_PORT/INFLUXDB_DATABASE');
 let username = 'MQTT_USER', password = "MQTT_PASSWORD", broker = 'MQTT_HOST', port = 1883, tempArr = [], tempAvg = 0, pressArr = [], pressAvg = 0, humArr = [], humAvg = 0, send = false, countData = 0, countHour = 0;
 
 /**
@@ -127,6 +128,8 @@ function calcAvg(arr) {
 }
 
 function writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr) {
+  //use this phrase if you are using a self-signed-certificate !!!Not-Recommended at all
+  //process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
   influx.writePoints([
     {
       measurement: 'INFLUX_MEASUREMENT',
@@ -153,6 +156,8 @@ function writeAverage(tempAvg, pressAvg, humAvg, tempArr, pressArr, humArr) {
 }
 
 function writeCurrentValue(tempArr, pressArr, humArr) {
+  //use this phrase if you are using a self-signed-certificate !!!Not-Recommended at all
+  //process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
   influx.writePoints([
     {
       measurement: 'INFLUX_MEASUREMENT',
